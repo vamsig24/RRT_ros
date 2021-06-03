@@ -5,21 +5,27 @@ RRT implementation on a given map
 You need to have installed [ROS - Robot Operating System](http://www.ros.org/) in your system.
 
 ## Running and visualization
-Clone the rrt-ros repository in to your preferable location. Then compile it using catkin as follows.
+Run roscore in another terminal.
+
+`roscore`
+
+Starting /map
+
+`cd RRT_ros/maps`
+
+`rosrun map_server map_server test.yaml`
+
+Open another terminal and clone the rrt-ros repository in to your preferable location. Then compile it using catkin as follows.
 
 `git clone https://github.com/vamsig24/RRT_ros.git`
 
-`cd RRt_ros/rrt-ros`
+`cd RRT_ros/rrt-ros`
 
 `catkin_make`
 
 Source the setup file of the rrt-ros to make the rrt-planning package visible to ros.
 
 `source devel/setup.bash` 
-
-Run roscore in another terminal.
-
-`roscore`
 
 Then run rrt node as follows.
 
