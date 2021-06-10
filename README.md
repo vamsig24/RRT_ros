@@ -25,7 +25,7 @@ Then launch map,rrt and rviz using the following command
 
 `roslaunch rrt-planning rrt_start.launch`
 
-As rviz has already been launched with the map and marker, you need to publish a goal from another terminal
+As rviz has already been launched with the map and marker, you need to publish a goal from another terminal. According to the current resolution of the map, the maximum x and y for the goal is around 31.
 
 `rostopic pub /goal geometry_msgs/Point '{x: 15, y: 16}'`
 
