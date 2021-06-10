@@ -18,21 +18,25 @@ void populateRviz();
 
 void populateObstacles(const nav_msgs::OccupancyGridConstPtr &grid);
 
+void setgoal(const geometry_msgs::PointConstPtr &goal_point);
+
+bool check_goal(const geometry_msgs::PointConstPtr &goal_point);
+
 void drawFinalPath(geometry_msgs::Point p1, geometry_msgs::Point p2, ros::Publisher marker_pub);
 
 bool moveRobot(ros::Publisher marker_pub, geometry_msgs::Point);
 
 Node init, goal;
 static RRT rrt = initRRT();
-static float goal_bias = 0.8;
-static float sigma = 1;
+double goal_bias = 0.5;
+double sigma = 0.8;
 static bool success = false;
 
 static int init_x = 0;
 static int init_y = 0;
 
-static int goal_x =2.8;
-static int goal_y =1.6;
+float goal_x =10;
+float goal_y =10;
 
 static std::vector<visualization_msgs::Marker> obsVec;
 static int path_node_index;
@@ -41,20 +45,36 @@ static bool pn_index_initialized = false;
 static ros::Publisher marker_pub;
 
 int main(int argc, char **argv) {
-    ros::init(argc, argv, "ros_rrt");
-    static ros::NodeHandle n;
+    ros::init(argc, argv, "rrt_planner");
+    ros::NodeHandle n("/");
+    ros::NodeHandle param_nh("~");
+    param_nh.getParam("goal_bias",goal_bias);
+    param_nh.getParam("sigma",sigma);
+    ROS_INFO("goal_bias: %f sigma: %f ",goal_bias,sigma);
     marker_pub = n.advertise<visualization_msgs::Marker>("visualization_marker", 10);
     ros::Publisher chatter_pub = n.advertise<std_msgs::String>("some_chatter", 10);
     // ros::Subscriber sub = n.subscribe("map", 1000, populateObstacles);
      nav_msgs::OccupancyGridConstPtr msg = ros::topic::waitForMessage<nav_msgs::OccupancyGrid>("map");
-    populateObstacles(msg);
+     populateObstacles(msg);
+     ros::Duration(2).sleep();
+     geometry_msgs::PointConstPtr msg_point = ros::topic::waitForMessage<geometry_msgs::Point>("goal");
+     while(check_goal(msg_point))
+     {
+         ROS_INFO("Give a proper goal");
+         msg_point = ros::topic::waitForMessage<geometry_msgs::Point>("goal");
+         ROS_INFO("goal_x: %f, goal_y: %f",msg_point->x,msg_point->y);
+         sleep(2);
+     }
+     setgoal(msg_point);
+     ROS_INFO("goal_bias: %f sigma: %f ",goal_bias,sigma);
+     ros::Duration(2).sleep();
     ros::Rate loop_rate(20);
     int frame_count = 0;
 
     while (ros::ok()) {
         ROS_INFO("Frame: %d", frame_count);
         populateRviz();
-
+        
         if (!success) {
             Node next_node = runRRT(marker_pub, frame_count);
             geometry_msgs::Point next_point = next_node.point;
@@ -65,6 +85,7 @@ int main(int argc, char **argv) {
                 goal.parentId = next_node.id;
                 success = true;
             }
+            // ROS_INFO("goal_x: %f, goal_y: %f",goal.point.x,goal.point.y);
         }
 
         if (success) {
@@ -112,7 +133,7 @@ int main(int argc, char **argv) {
             if (!ros::ok()) {
                 return 0;
             }
-            ROS_WARN_ONCE("Please run Rviz in another terminal.");
+            ROS_WARN_ONCE("Please run Rviz in another terminal. %d",marker_pub.getNumSubscribers());
             sleep(1);
         }
 
@@ -138,9 +159,9 @@ bool moveRobot(ros::Publisher marker_pub, geometry_msgs::Point next_pose) {
     rob.action = visualization_msgs::Marker::ADD;
     rob.lifetime = ros::Duration();
 
-    rob.scale.x = 0.2;
-    rob.scale.y = 0.2;
-    rob.scale.z = 0.25;
+    rob.scale.x = 0.5;
+    rob.scale.y = 0.5;
+    rob.scale.z = 0.5;
     rob.pose.orientation.w = 1;
     rob.pose.orientation.x = rob.pose.orientation.y = rob.pose.orientation.z = 0;
     rob.color.r = 1.0f;
@@ -172,7 +193,7 @@ RRT initRRT() {
     goal.point.x = goal_x;
     goal.point.y = goal_y;
     goal.id = 10000;
-    RRT rrt(init, goal, sigma, 20, 0, 20, 0);
+    RRT rrt(init, goal, sigma, 32.1, 0, 32.1, 0);
     return rrt;
 }
 
@@ -185,6 +206,7 @@ Node runRRT(ros::Publisher marker_pub, int frameid) {
     Node rand_node(tempP);
     Node next_node(tempP);
     Node nearest_node = rrt.getNearestNode(rand_point);
+    // ROS_INFO("Point X:%f Y: %f",nearest_node.point.x,nearest_node.point.y);
 
     //decide whether to extend toward the goal or a random point
     double r = rand() / (double) RAND_MAX;
@@ -213,7 +235,7 @@ void drawFinalPath(geometry_msgs::Point p1, geometry_msgs::Point p2, ros::Publis
     edge.action = visualization_msgs::Marker::ADD;
     edge.pose.orientation.w = 1;
 
-    edge.scale.x = 0.04;
+    edge.scale.x = 0.08;
 
     edge.color.g = edge.color.r = 1;
     edge.color.a = 1.0;
@@ -235,7 +257,7 @@ void addEdge(geometry_msgs::Point p1, geometry_msgs::Point p2, ros::Publisher ma
     edge.action = visualization_msgs::Marker::ADD;
     edge.pose.orientation.w = 1;
 
-    edge.scale.x = 0.02;
+    edge.scale.x = 0.04;
     if (!isFinal) {
         edge.color.r = 1.0;
     } else {
@@ -249,6 +271,36 @@ void addEdge(geometry_msgs::Point p1, geometry_msgs::Point p2, ros::Publisher ma
     marker_pub.publish(edge);
 }
 
+void setgoal(const geometry_msgs::PointConstPtr &goal_point){
+    goal_x = goal_point->x;
+    goal_y = goal_point->y;
+    goal.point.x = goal_x;
+    goal.point.y = goal_y;
+
+}
+
+bool check_goal(const geometry_msgs::PointConstPtr &goal_point){
+    float x = goal_point->x;
+    float y = goal_point->y;
+
+ for (int i = 0; i < obsVec.size(); i++) {
+        visualization_msgs::Marker obs = obsVec[i];
+
+        float obs_x = obs.pose.position.x;
+        float obs_y = obs.pose.position.y;
+
+        float dist = std::sqrt(std::pow((obs_x- x), 2) + std::pow((obs_y - y), 2));
+        if(dist<0.5)
+        {
+            ROS_INFO("dist from goal to obstacle is %f",dist);
+            return true;
+        }
+        
+    }
+    return false;
+}
+
+
 void populateRviz() {
     visualization_msgs::Marker v_start, v_end;
     v_start.type = v_end.type = visualization_msgs::Marker::POINTS;
@@ -261,8 +313,8 @@ void populateRviz() {
 
     v_start.color.a = 1.0f;
     v_start.color.g = 1.0f;
-    v_start.scale.x = v_start.scale.y = 0.2;
-    v_end.scale.x = v_end.scale.y = 0.2;
+    v_start.scale.x = v_start.scale.y = 0.5;
+    v_end.scale.x = v_end.scale.y = 0.5;
 
     v_end.color.a = 1.0f;
     v_end.color.r = 1.0f;
@@ -294,7 +346,7 @@ void populateObstacles(const nav_msgs::OccupancyGridConstPtr &grid) {
             {
                double x = width * grid->info.resolution + grid->info.resolution / 2;
                double y = height * grid->info.resolution + grid->info.resolution / 2;
-               ROS_INFO("X: %f Y: %f \n\n",x,y);
+            //    ROS_INFO("X: %f Y: %f \n\n",x,y);
 
                 visualization_msgs::Marker obs1;
                 obs1.type = visualization_msgs::Marker::CUBE;
@@ -305,7 +357,8 @@ void populateObstacles(const nav_msgs::OccupancyGridConstPtr &grid) {
                 obs1.action = visualization_msgs::Marker::ADD;
                 obs1.id = count_obj;
                 count_obj++;
-                obs1.scale.x = obs1.scale.y = 0.025;
+                obs1.scale.x = 0.1;
+                obs1.scale.y = 0.075;
                 obs1.scale.z = 0.1;
                 obs1.pose.position.x = x;
                 obs1.pose.position.y = y;
