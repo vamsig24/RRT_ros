@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+
+<launch>
+
+<node pkg="map_server" type="map_server" name="map" args="$(find rrt-planning)/maps/map3.yaml" output="screen">
+</node>
+
+<node pkg="rviz" type="rviz" name="rviz" args="-d $(find rrt-planning)/rviz_config/rrt_planning_config.rviz" output="screen">
+</node>
+
+<node pkg="rrt-planning" type="rrt" name="rrt_planner" args="" output="screen">
+<param name="goal_bias" type="double" value="0.55"/>
+<param name="sigma" type="double" value="0.8"/>
+</node>
+
+</launch>
