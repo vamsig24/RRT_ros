@@ -16,9 +16,10 @@
 
 struct Node {
 public:
-    Node() {}
+    Node() {}  //default constructor
 
-    Node(geometry_msgs::Point p) : point(p) {}
+    Node(geometry_msgs::Point p) : point(p) {} // second constructor, when the instance of the Node is passed an arguement of 
+                                                // type geometry_msgs::Point, it will be allocated to the member point
 
     int id;
     geometry_msgs::Point point;
@@ -32,39 +33,40 @@ public:
                                                                                          sigma(sigma), x_max(x_max),
                                                                                          x_min(x_min), y_max(y_max),
                                                                                          y_min(y_min) {
-        nodesList.reserve(1000);
-        nodesList.push_back(init);
+        nodesList.reserve(1000); //Create a pre-allocated vector with max nodes as 1000
+        nodesList.push_back(init); //Add the starting node to the nodeslist
     }
-
+    // Function which returns a randomly generated point
     geometry_msgs::Point getRandomConfig() {
         geometry_msgs::Point point;
 
         std::random_device rand_dev;
-        std::mt19937 generator(rand_dev());
-        std::uniform_int_distribution<int> distr(x_min, x_max);
+        std::mt19937 generator(rand_dev()); //Creating the generator
+        std::uniform_int_distribution<int> distr(x_min, x_max); //Creating  a uniform distribution between which the random numbers will be generated
 
-        point.x = distr(generator);
-        point.y = distr(generator);
+        point.x = distr(generator); //generating random x value
+        point.y = distr(generator); //generating random y value
+        // ROS_INFO("Random Point X:%f Y: %f",point.x,point.y);
         //todo: check for collisions.
         return point;
     }
 
-    std::map<float, Node> distance_map;
+    std::map<float, Node> distance_map; 
 
     Node getNearestNode(geometry_msgs::Point p) {
-        int n_nodes = nodesList.size();
+        int n_nodes = nodesList.size();  //get the total number of nodes
         if (n_nodes == 1) {
             return (nodesList[0]);
         }
-        distance_map.clear();
-
+        distance_map.clear(); 
+        // loop through all the nodes and compute the distance between the given point and all the nodes
         for (int i = 0; i < n_nodes; i++) {
-            Node treeNode = nodesList[i];
+            Node treeNode = nodesList[i];     
             float d = getEuclideanDistance(p, treeNode.point);
             distance_map[d] = treeNode;
         }
 
-        return distance_map.begin()->second;
+        return distance_map.begin()->second; //returns the address of the copy of the distance map 
     }
 
     /**
@@ -84,7 +86,7 @@ public:
      * @return point P which is in sigma distance to p1 in the direction of p2
      */
     Node expand(Node p1, Node p2, std::vector<visualization_msgs::Marker> obsVec, int frameid) {
-        //calculate the slope
+        //calculate the slope inorder to expand in the direction of 2 nodes given
         float m, nume, denom;
         if (p1.point.x != p2.point.x) {
             nume = (p2.point.y - p1.point.y);
@@ -93,17 +95,17 @@ public:
         }
         float theta = atan(m);
         if (theta < 0) {
-            if (denom < 0) {
+            if (denom < 0) {  //theta falls in second quadrant
                 theta = theta + M_PI;
-            } else {
+            } else {          //theta falls in fourth quadrant
                 theta = theta + 2 * M_PI;
             }
         } else {
-            if ((nume < 0) && (denom < 0)) {
+            if ((nume < 0) && (denom < 0)) {  //theta falls in third quadrant
                 theta = theta + M_PI;
             }
         }
-        float sin_theta = sin(theta);
+        float sin_theta = sin(theta); 
         float cos_theta = cos(theta);
 
         //calculate P
@@ -142,10 +144,10 @@ public:
         for (int i = 0; i < obsVec.size(); i++) {
             visualization_msgs::Marker obs = obsVec[i];
 
-            float obs_xl = (obs.pose.position.x - obs.scale.x / 2) - 0.5;
-            float obs_xr = (obs.pose.position.x + obs.scale.x / 2) + 0.5;
-            float obs_yb = (obs.pose.position.y - obs.scale.y / 2) - 0.5;
-            float obs_yt = (obs.pose.position.y + obs.scale.y / 2) + 0.5;
+            float obs_xl = (obs.pose.position.x - obs.scale.x / 2) - 0.2;
+            float obs_xr = (obs.pose.position.x + obs.scale.x / 2) + 0.2;
+            float obs_yb = (obs.pose.position.y - obs.scale.y / 2) - 0.2;
+            float obs_yt = (obs.pose.position.y + obs.scale.y / 2) + 0.2;
 
             //check for the bottom intersection
             bool bottom = lineIntersect(x1, y1, x2, y2, obs_xl, obs_yb, obs_xr, obs_yb);
