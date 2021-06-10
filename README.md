@@ -9,12 +9,6 @@ Run roscore in another terminal.
 
 `roscore`
 
-Starting /map
-
-`cd RRT_ros/maps`
-
-`rosrun map_server map_server test.yaml`
-
 Open another terminal and clone the rrt-ros repository in to your preferable location. Then compile it using catkin as follows.
 
 `git clone https://github.com/vamsig24/RRT_ros.git`
@@ -27,10 +21,22 @@ Source the setup file of the rrt-ros to make the rrt-planning package visible to
 
 `source devel/setup.bash` 
 
-Then run rrt node as follows.
+Then launch map,rrt and rviz using the following command
 
-`rosrun rrt-planning rrt`
+`roslaunch rrt-planning rrt_start.launch`
 
-You will be now promped to run rviz for visualization. Then run Rviz in another terminal.
+As rviz has already been launched with the map and marker, you need to publish a goal from another terminal
 
-`rosrun rviz rviz`
+`rostopic pub /goal geometry_msgs/Point '{x: 15, y: 16}'`
+
+---
+**NOTE**
+
+### Not reaching goal
+If the algorithm doesn't look like reaching the goal even after a few min(probably 3-4min). Then try to tweak the goal bias and sigma and relaunch code and publish the goal.
+Goal bias of around 0.5 to 0.7 and sigma of around 0.6 to 0.9 worked in most of the cases for me.
+
+### Rviz not planning/showing the goal
+It might be because your goal is too close to an obstacle, check the terminal in which you launched the 3 nodes for any feedback, you should be able to see the distance printed if your goal is too close. Planning will start once a safe goal is published.
+
+---
